@@ -6,50 +6,115 @@ import {
   Redirect,
   withRouter
 } from 'react-router-dom'
-window.axios.defaults.baseURL = "http://127.0.0.1:8000/coreback/rest-auth/";
+import PropTypes from "prop-types";
+import axios from 'axios';
+axios.defaults.baseURL = "http://127.0.0.1:8000/";
 
-const fakeAuth = {
-  isAuthenticated: false,
-  authenticate(cb) {
-    this.isAuthenticated = true
-    setTimeout(cb, 100)
-  },
-  signout(cb) {
-    this.isAuthenticated = false
-    setTimeout(cb, 100)
+function getCookie(cname) {
+  var name = cname + "=";
+  var decodedCookie = decodeURIComponent(document.cookie);
+  var ca = decodedCookie.split(';');
+  for(var i = 0; i <ca.length; i++) {
+    var c = ca[i];
+    while (c.charAt(0) === ' ') {
+      c = c.substring(1);
+    }
+    if (c.indexOf(name) === 0) {
+      return c.substring(name.length, c.length);
+    }
   }
+  return "";
 }
+
+//refactor below the following
+//make it so that on initilization it does backend call to see if the key is valid
+
 
 const Public = () => <h3>Public</h3>
 const Protected = () => <h3>Protected</h3>
 
 class Login extends React.Component {
-  constructor () {
-    super();
+  // static contextTypes = {
+  //   router: PropTypes.object
+  // }
+  constructor (props) {
+    super(props);
     this.state = {
       email:"",
       password:"",
-      redirectToReferrer: false
+      redirectToReferrer: false,
+      isAuthenticated:false
     };
+
     this.handleChange = this.handleChange.bind(this);
     this.login = this.login.bind(this);
+    this.logout = this.logout.bind(this);
   }
   handleChange (evt) {
     this.setState({ [evt.target.name]: evt.target.value});
   }
+  componentDidMount (){
+    console.log("compdidMMM");
+    console.log(getCookie("Auth"));
+    let config = {
+      headers: {
+        "Authorization": "Token "+getCookie("Auth")
+      }
+    }
+    axios.get('coreback/test_auth/',config
+      ).then((response) => {
+      // handle success
+      console.log(response);
+      this.setState(() => ({
+          isAuthenticated: true
+      }))
+    })
+    .catch(function (error) {
+      // handle error
+      console.log(error);
+      this.setState(() => ({
+          isAuthenticated: true
+      }))  
+    })
+  }
+  logout (){
+    // withRouter(({ history }) => history.push('http://www.facebook.com'));
+    // let config = {
+    //   headers: {
+    //     "Authorization": "Token "+getCookie("Auth")
+    //   }
+    // }
+    axios.post('coreback/rest-auth/logout/',
+      {
+        "Authorization": "Token "+getCookie("Auth")
+      }
+      ).then((response) => {
+      // handle success
+      console.log(response);
+      this.setState(() => ({
+        isAuthenticated: false
+      }))
+      // this.context.router.history.push("/");
+    })
+    .catch(function (error) {
+      // handle error
+      console.log(error);   
+    })
+    
+  }
   login (){
-    window.axios.post('login/',{ //TODO:add CORS headers
+    axios.post('coreback/rest-auth/login/',{ //TODO:add CORS headers
       email:this.state.email,
       password:this.state.password
     }).then((response) => {
       if("key" in response.data){
-        window.axios.defaults.headers.common['Authorization'] = response.data.key;
-        fakeAuth.isAuthenticated = true;
-        fakeAuth.authenticate(() => {
-          this.setState(() => ({
-            redirectToReferrer: true
-          }))
-        })
+        axios.defaults.headers.common['Authorization'] = response.data.key;
+        document.cookie = "Auth=" + response.data.key;
+        this.setState(() => ({
+          isAuthenticated: true
+        }))
+
+        console.log("HHHHHHHHHHHHH");
       }
     }).catch((error) => {
       if(error.response.status === 400){
@@ -64,12 +129,11 @@ class Login extends React.Component {
 
   }
   render() {
-    const { from } = this.props.location.state || { from: { pathname: '/' } }
-    const { redirectToReferrer } = this.state
-    if (redirectToReferrer === true) {
-      return <Redirect to={from} />
-    }
 
+    if (this.state.isAuthenticated){
+      return (<button onClick={this.logout}>Log out</button>)
+    }
+    
     return (
       <div>
         <p>You must log in to view the page</p>
@@ -81,42 +145,22 @@ class Login extends React.Component {
   }
 }
 
-const PrivateRoute = ({ component: Component, ...rest }) => (
-  <Route {...rest} render={(props) => (
-    fakeAuth.isAuthenticated === true
-      ? <Component {...props} />
-      : <Redirect to={{
-          pathname: '/login',
-          state: { from: props.location }
-        }} />
-  )} />
-)
-
-const AuthButton = withRouter(({ history }) => (
-  fakeAuth.isAuthenticated ? (
-    <p>
-      Welcome! <button onClick={() => {
-        fakeAuth.signout(() => history.push('/'))
-      }}>Sign out</button>
-    </p>
-  ) : (
-    <p>You are not logged in.</p>
-  )
-))
 
 export default function AuthExample () {
   return (
-    <Router>
+    <div>
+      <Login />
       <div>
-        <AuthButton/>
-        <ul>
-          <li><Link to="/public">Public Page</Link></li>
-          <li><Link to="/protected">Protected Page</Link></li>
-        </ul>
-        <Route path="/public" component={Public}/>
-        <Route path="/login" component={Login}/>
-        <PrivateRoute path='/protected' component={Protected} />
+      <Router>
+        <div>
+          <ul>
+            <li><Link to="/public">Public Page</Link></li>
+            <li><Link to="/protected">Protected Page</Link></li>
+          </ul>
+          <Route path="/public" component={Public}/>
+        </div>
+      </Router>
       </div>
-    </Router>
+    </div>
   )
 }
