@@ -1,14 +1,6 @@
 import React from 'react'
-import {
-  BrowserRouter as Router,
-  Route,
-  Link,
-  Redirect,
-  withRouter
-} from 'react-router-dom'
-import PropTypes from "prop-types";
 import axios from 'axios';
-axios.defaults.baseURL = "http://127.0.0.1:8000/";
+axios.defaults.baseURL = "http://127.0.0.1:8000/";//URL to djanog back end
 
 function getCookie(cname) {
   var name = cname + "=";
@@ -26,17 +18,156 @@ function getCookie(cname) {
   return "";
 }
 
-//refactor below the following
-//make it so that on initilization it does backend call to see if the key is valid
+function setCookie(cname, cvalue, exdays) {
+  var d = new Date();
+  d.setTime(d.getTime() + (exdays*24*60*60*1000));
+  var expires = "expires="+ d.toUTCString();
+  document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
+}
 
+class Reg extends React.Component {
+  constructor (props) {
+    super(props);
+    this.state = {
+      username:"",
+      email:"",
+      password1:"",
+      password2:""
+    }
+    this.handleChange = this.handleChange.bind(this);
+    this.registerUser = this.registerUser.bind(this);
+  };
 
-const Public = () => <h3>Public</h3>
-const Protected = () => <h3>Protected</h3>
+  handleChange (evt) {
+    this.setState({ [evt.target.name]: evt.target.value});
+  }
+  registerUser () {
+    //http://127.0.0.1:8000/coreback/rest-auth/registration/
+    axios.post('coreback/rest-auth/registration/',{ //TODO:add CORS headers
+      username:this.state.username,
+      email:this.state.email,
+      password1:this.state.password1,
+      password2:this.state.password2
+    }).then((response) => {
+      if("key" in response.data){
+        axios.defaults.headers.common['Authorization'] = response.data.key;
+        setCookie("Auth", response.data.key, 3);
+        this.setState(() => ({
+          isAuthenticated: true
+        }))
+        this.props.onLogin(true);
+      }
+    }).catch((error) => {
+      console.log(error);
+      if(error.response.status === 400){
+        alert("An error occured in registration");
+      }
+    });
+  }
+  render() {
+    return (
+      <div>
+        <h1>YOU WANNA MAKE AN ACCOUNT MAN?</h1><br/>
+        username:<input type="text" name="username" onChange={this.handleChange} /><br/>
+        email:<input type="text" name="email" onChange={this.handleChange} /><br/>
+        password<input type="password" name="password1" onChange={this.handleChange} /><br/>
+        confirm password<input type="password" name="password2" onChange={this.handleChange} /><br/>
+        <button onClick={this.registerUser}>Register</button>
+      </div>
+      )
+  }
+
+}
+
+class Profile extends React.Component {
+  constructor (props) {
+    super(props);
+    this.state = {
+      username:""
+    }
+  };
+  componentDidMount (){
+    let config = {
+      headers: {
+        "Authorization": "Token "+getCookie("Auth")
+      }
+    }
+    axios.get('coreback/profile/',config
+      ).then((response) => {
+      // handle success
+      console.log(response);
+      this.setState(() => ({
+          username: response.data.fname
+      }))
+    })
+    .catch((error) => {
+      // handle error
+      console.log(error);
+      this.setState(() => ({
+          isAuthenticated: false
+      }))  
+    })
+  }    
+  render() {
+    return (<h1>Hello:{this.state.username}</h1>)
+  }
+
+}
+
+class App extends React.Component {
+  constructor (props) {
+    super(props);
+    this.state = {
+      isAuthenticated:false
+    }
+  };
+  onLogin = (val) => {
+    this.setState({
+      isAuthenticated: val
+    })
+  };
+  componentDidMount (){
+    let config = {
+      headers: {
+        "Authorization": "Token "+getCookie("Auth")
+      }
+    }
+    axios.get('coreback/test_auth/',config
+      ).then((response) => {
+      // handle success
+      console.log(response);
+      this.setState(() => ({
+          isAuthenticated: true
+      }))
+    })
+    .catch((error) => {
+      // handle error
+      console.log(error);
+      this.setState(() => ({
+          isAuthenticated: false
+      }))  
+    })
+  }
+  render() {
+
+    if (this.state.isAuthenticated){
+      return (<div>
+                <Login onLogin={this.onLogin} />
+                <h1>WELCOME TO YO HOMESCREEN BRO</h1><br/>
+                <Profile />
+              </div>)
+    }
+    
+    return (
+      <div>
+        <Login onLogin={this.onLogin} />
+        <Reg onLogin={this.onLogin} />
+      </div>
+    )
+  }
+}
 
 class Login extends React.Component {
-  // static contextTypes = {
-  //   router: PropTypes.object
-  // }
   constructor (props) {
     super(props);
     this.state = {
@@ -54,8 +185,6 @@ class Login extends React.Component {
     this.setState({ [evt.target.name]: evt.target.value});
   }
   componentDidMount (){
-    console.log("compdidMMM");
-    console.log(getCookie("Auth"));
     let config = {
       headers: {
         "Authorization": "Token "+getCookie("Auth")
@@ -69,32 +198,30 @@ class Login extends React.Component {
           isAuthenticated: true
       }))
     })
-    .catch(function (error) {
+    .catch((error) => {
       // handle error
       console.log(error);
       this.setState(() => ({
-          isAuthenticated: true
+          isAuthenticated: false
       }))  
     })
   }
   logout (){
-    // withRouter(({ history }) => history.push('http://www.facebook.com'));
-    // let config = {
-    //   headers: {
-    //     "Authorization": "Token "+getCookie("Auth")
-    //   }
-    // }
+
     axios.post('coreback/rest-auth/logout/',
       {
-        "Authorization": "Token "+getCookie("Auth")
+        headers: { 
+          "Authorization": "Bearer " + getCookie("Auth")
+         }
       }
       ).then((response) => {
       // handle success
       console.log(response);
+      setCookie("Auth", "", 0);
       this.setState(() => ({
         isAuthenticated: false
       }))
-      // this.context.router.history.push("/");
+      this.props.onLogin(false);
     })
     .catch(function (error) {
       // handle error
@@ -109,12 +236,11 @@ class Login extends React.Component {
     }).then((response) => {
       if("key" in response.data){
         axios.defaults.headers.common['Authorization'] = response.data.key;
-        document.cookie = "Auth=" + response.data.key;
+        setCookie("Auth", response.data.key, 3);
         this.setState(() => ({
           isAuthenticated: true
         }))
-
-        console.log("HHHHHHHHHHHHH");
+        this.props.onLogin(true);
       }
     }).catch((error) => {
       if(error.response.status === 400){
@@ -137,8 +263,8 @@ class Login extends React.Component {
     return (
       <div>
         <p>You must log in to view the page</p>
-        <input type="text" name="email" onChange={this.handleChange} />
-        <input type="password" name="password" onChange={this.handleChange} />
+        email:<input type="text" name="email" onChange={this.handleChange} />
+        password:<input type="password" name="password" onChange={this.handleChange} />
         <button onClick={this.login}>Log in</button>
       </div>
     )
@@ -149,18 +275,7 @@ class Login extends React.Component {
 export default function AuthExample () {
   return (
     <div>
-      <Login />
-      <div>
-      <Router>
-        <div>
-          <ul>
-            <li><Link to="/public">Public Page</Link></li>
-            <li><Link to="/protected">Protected Page</Link></li>
-          </ul>
-          <Route path="/public" component={Public}/>
-        </div>
-      </Router>
-      </div>
+      <App />
     </div>
   )
 }
