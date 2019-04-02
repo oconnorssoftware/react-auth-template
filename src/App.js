@@ -1,6 +1,6 @@
 import React from 'react'
 import axios from 'axios';
-axios.defaults.baseURL = "http://127.0.0.1:8000/";//URL to djanog back end
+axios.defaults.baseURL = "http://127.0.0.1:8000/";//URL to django back end
 
 function getCookie(cname) {
   var name = cname + "=";
