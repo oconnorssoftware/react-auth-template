@@ -3,3 +3,5 @@ A static front end for https://github.com/oconnorssoftware/django-backend-templa
 
 I built this as a bone knives and bare skin starting point for anyone (including myself) looking 
 to dive into making a simple page with data submission in reactjs.
+
+![alt text](https://raw.githubusercontent.com/oconnorssoftware/react-auth-template/master/screenshots/reg.png)
