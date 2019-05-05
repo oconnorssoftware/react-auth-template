@@ -122,7 +122,7 @@ class Login extends React.Component {
     
     return (
       <div>
-        <p>You must log in to view the page</p>
+        <p>Already have an account?</p>
         <form>
           email:<Input type="text" name="email" onChange={this.handleChange} />
           password:<Input type="password" name="password" onChange={this.handleChange} />

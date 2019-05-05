@@ -4,6 +4,7 @@ import Input from '@material-ui/core/Input';
 import Button from '@material-ui/core/Button';
 import Paper from '@material-ui/core/Paper';
 import CssBaseline from '@material-ui/core/CssBaseline';
+import { withStyles } from '@material-ui/core/styles';
 axios.defaults.baseURL = "http://127.0.0.1:8000/";//URL to django back end
 
 
@@ -29,6 +30,40 @@ function setCookie(cname, cvalue, exdays) {
   var expires = "expires="+ d.toUTCString();
   document.cookie = cname + "=" + cvalue + ";" + expires + ";path=/";
 }
+
+const styles = theme => ({
+  main: {
+    width: 'auto',
+    display: 'block', // Fix IE 11 issue.
+    marginLeft: theme.spacing.unit * 3,
+    marginRight: theme.spacing.unit * 3,
+    [theme.breakpoints.up(400 + theme.spacing.unit * 3 * 2)]: {
+      width: 400,
+      marginLeft: 'auto',
+      marginRight: 'auto',
+    },
+  },
+  paper: {
+    marginTop: theme.spacing.unit * 8,
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'left',
+    width: '50%',
+    padding: `${theme.spacing.unit * 2}px ${theme.spacing.unit * 3}px ${theme.spacing.unit * 3}px`,
+  },
+  avatar: {
+    margin: theme.spacing.unit,
+    backgroundColor: theme.palette.secondary.main,
+  },
+  form: {
+    width: '100%', // Fix IE 11 issue.
+    marginTop: theme.spacing.unit,
+  },
+  submit: {
+    marginTop: theme.spacing.unit * 3,
+  },
+});
+
 
 class Reg extends React.Component {
   constructor (props) {
@@ -74,13 +109,13 @@ class Reg extends React.Component {
       <div>
         <CssBaseline />
 
-        <Paper alignItems="center">
+        <Paper className={this.props.classes.paper}>
           <h1>YOU WANNA MAKE AN ACCOUNT MAN?</h1><br/>
           username:<Input type="text" name="username" onChange={this.handleChange} /><br/>
           email:<Input type="text" name="email" onChange={this.handleChange} /><br/>
           password<Input type="password" name="password1" onChange={this.handleChange} /><br/>
           confirm password<Input type="password" name="password2" onChange={this.handleChange} /><br/>
-          <Button onClick={this.registerUser}>Register</Button>
+          <Button fullWidth variant="contained" color="primary" className={this.props.classes.submit} onClick={this.registerUser}>Register</Button>
         </Paper>
       </div>
       )
@@ -88,4 +123,4 @@ class Reg extends React.Component {
 
 }
 
-export default Reg;
+export default withStyles(styles)(Reg);
